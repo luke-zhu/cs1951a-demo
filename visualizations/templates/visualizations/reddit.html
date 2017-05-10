@@ -1,0 +1,201 @@
+{% load static %}
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Home</title>
+    <!-- Bootstrap -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Local stylesheet -->
+    <link href="{% static 'visualizations/style.css' %}" rel="stylesheet">
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+</head>
+
+<body>
+    <nav class="navbar navbar-default">
+      <div class="collapse navbar-collapse" id="navbarsExampleDefault">
+        <ul class="navbar-nav nav">
+          <li class="nav-item active">
+            <a class="nav-link" href="http://127.0.0.1:8000/">Home <span class="sr-only">(current)</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href='http://127.0.0.1:8000/reddit/'>Reddit</a>
+          </li>
+         <li class="nav-item">
+            <a class="nav-link" href='http://127.0.0.1:8000/genius/'>Genius</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    <div class="container">
+      <h1>{{ title }}</h1>
+      <form>
+        <label> Search for titles mentioning:</label><br>
+        <input type="text" class="form-control " name="q1"><br>
+        <input type="text" class="form-control " name="q2"><br>
+        <input type="text" class="form-control " name="q3"><br>
+        <input type="submit" class="btn btn-primary" value="Submit">
+      </form>
+      <div id="chart"></div>
+    </div>
+
+    <script>
+    var margin = {top: 100, right: 100, bottom: 100, left: 100},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+    var parseTime = d3.timeParse("%y-%m")
+    var formatTime = d3.timeFormat("%y-%m")
+
+    // set the ranges
+    var x = d3.scaleTime().range([0, width]);
+    x.ticks(d3.timeMonth.every(1));
+    var y = d3.scaleLinear().range([height, 0]);
+
+    // define the line
+    var valueline = d3.line()
+        .x(function(d) { return x(d[0]); })
+        .y(function(d) { return y(d[1]); });
+
+    // append the svg obgect to the body of the page
+    // appends a 'group' element to 'svg'
+    // moves the 'group' element to the top left margin
+    var svg = d3.select("#chart").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform",
+              "translate(" + margin.left + "," + margin.top + ")");
+    // Get the data
+    raw_data = {{ posts|safe }}
+    q1 = '{{ q1|safe }}' 
+    q2 = '{{ q2|safe }}'
+    q3 = '{{ q3|safe }}'
+    
+    var aggregated_data = {}
+    var aggregated_data2 = {}
+    var aggregated_data3 = {}
+
+    raw_data.forEach(function(d) {
+      var date = formatTime(d3.isoParse(d.fields.datetime))
+      // console.log(d.title)
+      if (aggregated_data[date]) {
+        aggregated_data[date] += d.fields.title.toLowerCase().includes(q1.toLowerCase()) ? 1 : 0
+      } else {
+        aggregated_data[date] = d.fields.title.toLowerCase().includes(q1.toLowerCase()) ? 1 : 0
+      }
+    });
+
+    var data_arr = Object.keys(aggregated_data)
+      .map(key => [parseTime(key), aggregated_data[key]])
+      .sort((a, b) => a[0] - b[0]);
+
+    console.log(data_arr)
+    var data_arr2 = []
+    var data_arr3 = []
+
+    if (q2 !== '') {
+      raw_data.forEach(function(d) {
+      var date = formatTime(d3.isoParse(d.fields.datetime))
+      // console.log(d.title)
+      if (aggregated_data2[date]) {
+        aggregated_data2[date] += d.fields.title.toLowerCase().includes(q2.toLowerCase()) ? 1 : 0
+      } else {
+        aggregated_data2[date] = d.fields.title.toLowerCase().includes(q2.toLowerCase()) ? 1 : 0
+      }
+    });
+      data_arr2 = Object.keys(aggregated_data2)
+      .map(key => [parseTime(key), aggregated_data2[key]])
+      .sort((a, b) => a[0] - b[0]);
+    } 
+
+    if (q3 !== '') {
+      raw_data.forEach(function(d) {
+      var date = formatTime(d3.isoParse(d.fields.datetime))
+      // console.log(d.title)
+      if (aggregated_data3[date]) {
+        aggregated_data3[date] += d.fields.title.toLowerCase().includes(q3.toLowerCase()) ? 1 : 0
+      } else {
+        aggregated_data3[date] = d.fields.title.toLowerCase().includes(q3.toLowerCase()) ? 1 : 0
+      }
+    });
+      data_arr3 = Object.keys(aggregated_data3)
+      .map(key => [parseTime(key), aggregated_data3[key]])
+      .sort((a, b) => a[0] - b[0]);
+    } 
+
+    // Scale the range of the data
+    x.domain(d3.extent(data_arr.concat(data_arr2), function(d) { return d[0]; }));
+    y.domain([0, d3.max(data_arr.concat(data_arr2), function(d) { return d[1]; })]);
+
+    // Add the valueline path.
+    svg.selectAll("path")
+      .append('g')
+        .data([data_arr, data_arr2, data_arr3])
+        .enter()
+        .append("path")
+        .attr("class", "line")
+        .attr("stroke", (d, i) => {
+          if (i == 0) {
+            return 'steelblue'
+          } else if (i == 1) {
+            return 'palevioletred'
+          } else {
+            return 'goldenrod'
+          }
+        })
+        .attr("d", valueline);
+
+    svg.append('text')
+      .attr('x', width + 20)
+      .attr('y', height / 2)
+      .attr('fill', 'steelblue')
+      .text(q1 !== '' ? q1 : 'All Posts')
+
+    svg.append('text')
+      .attr('x', width + 20)
+      .attr('y', height / 2 + 20)
+      .attr('fill', 'palevioletred')
+      .text(q2)
+
+    svg.append('text')
+      .attr('x', width + 20)
+      .attr('y', height / 2 + 40)
+      .attr('fill', 'goldenrod')
+      .text(q3)
+
+    svg.append('circle')
+      .attr('cx', width + 10)
+      .attr('cy', height / 2 - 5)
+      .attr('fill', 'steelblue')
+      .attr('r', 5)
+
+    svg.append('circle')
+      .attr('cx', width + 10)
+      .attr('cy', height / 2 + 15)
+      .attr('fill', 'palevioletred')
+      .attr('r', q2 !== '' ? 5: 0)
+
+    svg.append('circle')
+      .attr('cx', width + 10)
+      .attr('cy', height / 2 + 35)
+      .attr('fill', 'goldenrod')
+      .attr('r', q3 !== '' ? 5 : 0)
+
+    // Add the X Axis
+    svg.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+    // Add the Y Axis
+    svg.append("g")
+        .call(d3.axisLeft(y));
+    </script>
+   <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+    <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+</body>
