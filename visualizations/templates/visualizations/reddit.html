@@ -127,8 +127,8 @@
     } 
 
     // Scale the range of the data
-    x.domain(d3.extent(data_arr.concat(data_arr2), function(d) { return d[0]; }));
-    y.domain([0, d3.max(data_arr.concat(data_arr2), function(d) { return d[1]; })]);
+    x.domain(d3.extent(data_arr.concat(data_arr2).concat(data_arr3), function(d) { return d[0]; }));
+    y.domain([0, d3.max(data_arr.concat(data_arr2).concat(data_arr3), function(d) { return d[1]; })]);
 
     // Add the valueline path.
     svg.selectAll("path")
